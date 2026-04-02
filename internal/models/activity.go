@@ -16,11 +16,14 @@ type Activity struct {
 
 	// The user performing the activity
 	AccountID string
+	// Platform-specific URL to the user's profile
+	AccountURL string
 
 	// For ActivityPost
-	PostID    string
-	Text      string
-	ReplyToID string // Optional parent post ID
+	PostID string
+	Text   string
+	// Optional parent post ID
+	ReplyToID string
 
 	// For ActivityLike and ActivityRepost
 	TargetID string // The post being liked or reposted

@@ -85,11 +85,12 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 		}
 
 		act := models.Activity{
-			Type:      actType,
-			AccountID: v.Did,
-			PostID:    v.Commit.Record.Uri,
-			Text:      v.Commit.Record.Text,
-			CreatedAt: v.Commit.Record.CreatedAt,
+			Type:       actType,
+			AccountID:  v.Did,
+			AccountURL: "https://bsky.app/profile/" + v.Did,
+			PostID:     v.Commit.Record.Uri,
+			Text:       v.Commit.Record.Text,
+			CreatedAt:  v.Commit.Record.CreatedAt,
 		}
 
 		if v.Commit.Record.Reply != nil {

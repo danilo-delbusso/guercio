@@ -49,18 +49,21 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 		var query string
 		params := map[string]any{
 			"did": act.AccountID,
+			"url": act.AccountURL,
 		}
 
 		switch act.Type {
 		case models.ActivityPost:
 			query = `
 			    MERGE (u:Account {did: $did})
+			    ON CREATE SET u.url = $url
 			    MERGE (p:Post {uri: $uri})
 			    ON CREATE SET
 			        p.text = $text,
 			        p.createdAt = datetime($createdAt)
 
-			    MERGE (u)-[:POSTED]->(p)
+			    MERGE (u)-[r:POSTED]->(p)
+			    ON CREATE SET r.createdAt = datetime($createdAt)
 
 			    WITH p
 			    WHERE $parentUri IS NOT NULL AND $parentUri <> ""
@@ -79,6 +82,7 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			}
 			query = `
 			    MERGE (u:Account {did: $did})
+			    ON CREATE SET u.url = $url
 			    MERGE (p:Post {uri: $subjectUri})
 			    MERGE (u)-[r:LIKES]->(p)
 			    ON CREATE SET r.createdAt = datetime($createdAt)
@@ -92,6 +96,7 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			}
 			query = `
 			    MERGE (u:Account {did: $did})
+			    ON CREATE SET u.url = $url
 			    MERGE (p:Post {uri: $subjectUri})
 			    MERGE (u)-[r:REPOSTED]->(p)
 			    ON CREATE SET r.createdAt = datetime($createdAt)
@@ -114,10 +119,15 @@ func (s *Neo4jStore) DetectHighSpeedBurst(ctx context.Context) (int64, error) {
 	defer session.Close(ctx)
 
 	query := `
-		MATCH (a:Account)-[:POSTED]->(p1:Post)-[:REPLIED_TO]->(p2:Post)-[:REPLIED_TO]->(p3:Post)-[:REPLIED_TO]->(p4:Post)
-		WITH a, p1, p4
-		WHERE duration.between(p4.createdAt, p1.createdAt).seconds < 15
-		SET a:Bot, a.reason = '4-hop high-speed burst'
+		MATCH (a:Account)-[r]->()
+		WHERE type(r) IN ['POSTED', 'LIKES', 'REPOSTED'] AND r.createdAt IS NOT NULL
+		WITH a, r.createdAt AS t
+		ORDER BY a, t
+		WITH a, collect(t) AS times
+		WHERE size(times) >= 4
+		WITH a, [i IN range(0, size(times)-4) WHERE duration.between(times[i], times[i+3]).seconds < 15 | 1] AS bursts
+		WHERE size(bursts) > 0
+		SET a:Bot, a.reason = '4-action high-speed burst'
 		RETURN count(a) as detected
 	`
 
