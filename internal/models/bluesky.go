@@ -6,8 +6,9 @@ import (
 
 // FirehoseEvent is the wrapper we send down the channel
 type FirehoseEvent struct {
-	User string
-	Post PostRecord
+	User       string
+	Collection string
+	Post       PostRecord
 }
 
 // PostRecord represents the "app.bsky.feed.post" lexicon.
