@@ -34,6 +34,10 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "stopping")
 
+	// Jetstream payloads can occasionally exceed the default 32KB limit.
+	// Set the read limit to 10MB to avoid "message too big" errors.
+	conn.SetReadLimit(10 * 1024 * 1024)
+
 	r.logger.Info("Connected! Streaming to channel...")
 
 	for {
