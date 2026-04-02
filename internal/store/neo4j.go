@@ -71,6 +71,13 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    MERGE (parent:Post {uri: $parentUri})
 			    ON CREATE SET parent.url = $parentUrl
 			    MERGE (p)-[:REPLIED_TO]->(parent)
+
+                FOREACH (ignore IN CASE WHEN $parentAuthorDid IS NOT NULL AND $parentAuthorDid <> "" THEN [1] ELSE [] END |
+                    MERGE (parentAuthor:Account {did: $parentAuthorDid})
+                    ON CREATE SET parentAuthor.url = $parentAuthorUrl
+                    MERGE (parentAuthor)-[:POSTED]->(parent)
+                )
+
 			    RETURN p
 			`
 			params["uri"] = act.PostID
@@ -79,6 +86,12 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			params["createdAt"] = act.CreatedAt.Format("2006-01-02T15:04:05.999Z07:00")
 			params["parentUri"] = act.ReplyToID
 			params["parentUrl"] = act.ReplyToURL
+			params["parentAuthorDid"] = act.ReplyToAuthorID
+			parentAuthorUrl := ""
+			if act.ReplyToAuthorID != "" {
+				parentAuthorUrl = "https://bsky.app/profile/" + act.ReplyToAuthorID
+			}
+			params["parentAuthorUrl"] = parentAuthorUrl
 
 		case models.ActivityLike:
 			if act.TargetID == "" {
@@ -91,10 +104,22 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    ON CREATE SET p.url = $targetUrl
 			    MERGE (u)-[r:LIKES]->(p)
 			    ON CREATE SET r.createdAt = datetime($createdAt)
+
+                FOREACH (ignore IN CASE WHEN $targetAuthorDid IS NOT NULL AND $targetAuthorDid <> "" THEN [1] ELSE [] END |
+                    MERGE (targetAuthor:Account {did: $targetAuthorDid})
+                    ON CREATE SET targetAuthor.url = $targetAuthorUrl
+                    MERGE (targetAuthor)-[:POSTED]->(p)
+                )
 			`
 			params["subjectUri"] = act.TargetID
 			params["targetUrl"] = act.TargetURL
 			params["createdAt"] = act.CreatedAt.Format("2006-01-02T15:04:05.999Z07:00")
+			params["targetAuthorDid"] = act.TargetAuthorID
+			targetAuthorUrl := ""
+			if act.TargetAuthorID != "" {
+				targetAuthorUrl = "https://bsky.app/profile/" + act.TargetAuthorID
+			}
+			params["targetAuthorUrl"] = targetAuthorUrl
 
 		case models.ActivityRepost:
 			if act.TargetID == "" {
@@ -107,10 +132,22 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    ON CREATE SET p.url = $targetUrl
 			    MERGE (u)-[r:REPOSTED]->(p)
 			    ON CREATE SET r.createdAt = datetime($createdAt)
+
+                FOREACH (ignore IN CASE WHEN $targetAuthorDid IS NOT NULL AND $targetAuthorDid <> "" THEN [1] ELSE [] END |
+                    MERGE (targetAuthor:Account {did: $targetAuthorDid})
+                    ON CREATE SET targetAuthor.url = $targetAuthorUrl
+                    MERGE (targetAuthor)-[:POSTED]->(p)
+                )
 			`
 			params["subjectUri"] = act.TargetID
 			params["targetUrl"] = act.TargetURL
 			params["createdAt"] = act.CreatedAt.Format("2006-01-02T15:04:05.999Z07:00")
+			params["targetAuthorDid"] = act.TargetAuthorID
+			targetAuthorUrl := ""
+			if act.TargetAuthorID != "" {
+				targetAuthorUrl = "https://bsky.app/profile/" + act.TargetAuthorID
+			}
+			params["targetAuthorUrl"] = targetAuthorUrl
 
 		default:
 			return nil, nil

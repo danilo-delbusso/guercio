@@ -98,10 +98,12 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 		if v.Commit.Record.Reply != nil {
 			act.ReplyToID = v.Commit.Record.Reply.Parent.Uri
 			act.ReplyToURL = atUriToWebUrl(v.Commit.Record.Reply.Parent.Uri)
+			act.ReplyToAuthorID = atUriToDid(v.Commit.Record.Reply.Parent.Uri)
 		}
 		if v.Commit.Record.Subject != nil {
 			act.TargetID = v.Commit.Record.Subject.Uri
 			act.TargetURL = atUriToWebUrl(v.Commit.Record.Subject.Uri)
+			act.TargetAuthorID = atUriToDid(v.Commit.Record.Subject.Uri)
 		}
 
 		select {
@@ -110,6 +112,14 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 			return ctx.Err()
 		}
 	}
+}
+
+func atUriToDid(uri string) string {
+	parts := strings.Split(uri, "/")
+	if len(parts) >= 3 && parts[0] == "at:" {
+		return parts[2]
+	}
+	return ""
 }
 
 func atUriToWebUrl(uri string) string {
