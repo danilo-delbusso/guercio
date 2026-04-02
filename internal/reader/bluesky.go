@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
+	"codeberg.org/dbus/botdetector/internal/logger"
 	"codeberg.org/dbus/botdetector/internal/models"
-	"github.com/charmbracelet/log"
 	"github.com/coder/websocket"
 )
 
@@ -22,10 +22,10 @@ var _ Reader = (*BlueskyReader)(nil)
 // BlueskyReader is the implementation of Reader for the Bluesky Jetstream firehose.
 type BlueskyReader struct {
 	uri    string
-	logger *log.Logger
+	logger logger.Logger
 }
 
-func NewBlueskyReader(logger *log.Logger) *BlueskyReader {
+func NewBlueskyReader(logger logger.Logger) *BlueskyReader {
 	return &BlueskyReader{
 		uri:    "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post&wantedCollections=app.bsky.feed.like&wantedCollections=app.bsky.feed.repost",
 		logger: logger,

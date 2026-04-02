@@ -4,17 +4,17 @@ import (
 	"context"
 	"time"
 
+	"codeberg.org/dbus/botdetector/internal/logger"
 	"codeberg.org/dbus/botdetector/internal/models"
 	"codeberg.org/dbus/botdetector/internal/store"
-	"github.com/charmbracelet/log"
 )
 
 type Service struct {
 	store  store.Store
-	logger *log.Logger
+	logger logger.Logger
 }
 
-func NewService(store store.Store, logger *log.Logger) *Service {
+func NewService(store store.Store, logger logger.Logger) *Service {
 	return &Service{
 		store:  store,
 		logger: logger,
