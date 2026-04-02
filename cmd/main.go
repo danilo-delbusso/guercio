@@ -48,7 +48,6 @@ func main() {
 	detService := detection.NewService(neoStore, logger)
 
 	go detService.Ingest(ctx, events)
-	go detService.RunAnalysisLoop(ctx, 5*time.Second)
 
 	logger.Info("Starting Firehose Ingestion...")
 	if err := r.Run(ctx, events); err != nil {
