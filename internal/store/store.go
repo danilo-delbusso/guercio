@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	"codeberg.org/dbus/botdetector/internal/models"
+	"codeberg.org/dbus/guercio/internal/models"
 )
 
 // Store defines the data layer interface for bot detection

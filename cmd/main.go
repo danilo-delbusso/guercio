@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"codeberg.org/dbus/botdetector/internal/config"
-	"codeberg.org/dbus/botdetector/internal/detection"
-	"codeberg.org/dbus/botdetector/internal/models"
-	"codeberg.org/dbus/botdetector/internal/reader"
-	"codeberg.org/dbus/botdetector/internal/store"
+	"codeberg.org/dbus/guercio/internal/config"
+	"codeberg.org/dbus/guercio/internal/detection"
+	"codeberg.org/dbus/guercio/internal/models"
+	"codeberg.org/dbus/guercio/internal/reader"
+	"codeberg.org/dbus/guercio/internal/store"
 	"github.com/charmbracelet/log"
 	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )

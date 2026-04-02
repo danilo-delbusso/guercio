@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	"codeberg.org/dbus/botdetector/internal/models"
+	"codeberg.org/dbus/guercio/internal/models"
 	"github.com/neo4j/neo4j-go-driver/v6/neo4j"
 )
 

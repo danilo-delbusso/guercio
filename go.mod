@@ -1,4 +1,4 @@
-module codeberg.org/dbus/botdetector
+module codeberg.org/dbus/guercio
 
 go 1.26.1
 

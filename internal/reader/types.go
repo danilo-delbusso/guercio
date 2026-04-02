@@ -3,7 +3,7 @@ package reader
 import (
 	"context"
 
-	"codeberg.org/dbus/botdetector/internal/models"
+	"codeberg.org/dbus/guercio/internal/models"
 )
 
 type Reader interface {

@@ -7,8 +7,8 @@ import (
 	"io"
 	"strings"
 
-	"codeberg.org/dbus/botdetector/internal/logger"
-	"codeberg.org/dbus/botdetector/internal/models"
+	"codeberg.org/dbus/guercio/internal/logger"
+	"codeberg.org/dbus/guercio/internal/models"
 	"github.com/coder/websocket"
 )
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"codeberg.org/dbus/botdetector/internal/logger"
-	"codeberg.org/dbus/botdetector/internal/models"
-	"codeberg.org/dbus/botdetector/internal/store"
+	"codeberg.org/dbus/guercio/internal/logger"
+	"codeberg.org/dbus/guercio/internal/models"
+	"codeberg.org/dbus/guercio/internal/store"
 )
 
 type Service struct {
