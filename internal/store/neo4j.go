@@ -20,6 +20,9 @@ func (s *Neo4jStore) EnsureSchema(ctx context.Context) error {
 		`CREATE CONSTRAINT account_did IF NOT EXISTS FOR (a:Account) REQUIRE a.did IS UNIQUE`,
 		`CREATE CONSTRAINT post_uri IF NOT EXISTS FOR (p:Post) REQUIRE p.uri IS UNIQUE`,
 		`CREATE INDEX post_created_at IF NOT EXISTS FOR (p:Post) ON (p.createdAt)`,
+		`CREATE INDEX likes_created_at IF NOT EXISTS FOR ()-[r:LIKES]-() ON (r.createdAt)`,
+		`CREATE INDEX posted_created_at IF NOT EXISTS FOR ()-[r:POSTED]-() ON (r.createdAt)`,
+		`CREATE INDEX reposted_created_at IF NOT EXISTS FOR ()-[r:REPOSTED]-() ON (r.createdAt)`,
 		`CREATE FULLTEXT INDEX post_text_search IF NOT EXISTS FOR (p:Post) ON EACH [p.text]`,
 	}
 
@@ -200,27 +203,36 @@ func (s *Neo4jStore) DetectEngagementPods(ctx context.Context) (int64, error) {
 	defer session.Close(ctx)
 
 	query := `
-		MATCH (a1:Account)-[l12:LIKES]->(:Post)<-[:POSTED]-(a2:Account)
-		WHERE id(a1) < id(a2)
-		MATCH (a1)-[l13:LIKES]->(:Post)<-[:POSTED]-(a3:Account)
-		WHERE id(a2) < id(a3)
-		MATCH (a1)-[l14:LIKES]->(:Post)<-[:POSTED]-(a4:Account)
-		WHERE id(a3) < id(a4)
+		// Stepwise clique building to prevent combinatorial explosion and OOM
 
-		MATCH (a2)-[l21:LIKES]->(:Post)<-[:POSTED]-(a1),
-		      (a2)-[l23:LIKES]->(:Post)<-[:POSTED]-(a3),
-		      (a2)-[l24:LIKES]->(:Post)<-[:POSTED]-(a4),
+		// 1. Find mutual pairs
+		MATCH (a1:Account)-[l12:LIKES]->(:Post)<-[:POSTED]-(a2:Account),
+		      (a2)-[l21:LIKES]->(:Post)<-[:POSTED]-(a1)
+		WHERE elementId(a1) < elementId(a2)
+		WITH a1, a2, l12, l21
+
+		// 2. Find mutual triads
+		MATCH (a1)-[l13:LIKES]->(:Post)<-[:POSTED]-(a3:Account),
 		      (a3)-[l31:LIKES]->(:Post)<-[:POSTED]-(a1),
-		      (a3)-[l32:LIKES]->(:Post)<-[:POSTED]-(a2),
-		      (a3)-[l34:LIKES]->(:Post)<-[:POSTED]-(a4),
-		      (a4)-[l41:LIKES]->(:Post)<-[:POSTED]-(a1),
-		      (a4)-[l42:LIKES]->(:Post)<-[:POSTED]-(a2),
-		      (a4)-[l43:LIKES]->(:Post)<-[:POSTED]-(a3)
+		      (a2)-[l23:LIKES]->(:Post)<-[:POSTED]-(a3),
+		      (a3)-[l32:LIKES]->(:Post)<-[:POSTED]-(a2)
+		WHERE elementId(a2) < elementId(a3)
+		WITH a1, a2, a3, l12, l21, l13, l31, l23, l32
 
-		WITH a1, a2, a3, a4, [l12, l13, l14, l21, l23, l24, l31, l32, l34, l41, l42, l43] AS likes
-		UNWIND likes AS l
-		WITH a1, a2, a3, a4, min(l.createdAt) AS minT, max(l.createdAt) AS maxT
-		WHERE duration.inSeconds(minT, maxT).seconds <= 600
+		// 3. Find mutual tetrads (clique size 4)
+		MATCH (a1)-[l14:LIKES]->(:Post)<-[:POSTED]-(a4:Account),
+		      (a4)-[l41:LIKES]->(:Post)<-[:POSTED]-(a1),
+		      (a2)-[l24:LIKES]->(:Post)<-[:POSTED]-(a4),
+		      (a4)-[l42:LIKES]->(:Post)<-[:POSTED]-(a2),
+		      (a3)-[l34:LIKES]->(:Post)<-[:POSTED]-(a4),
+		      (a4)-[l43:LIKES]->(:Post)<-[:POSTED]-(a3)
+		WHERE elementId(a3) < elementId(a4)
+
+		// 4. Check temporal constraint on the whole clique's activity
+		WITH [l12.createdAt, l21.createdAt, l13.createdAt, l31.createdAt, l23.createdAt, l32.createdAt, l14.createdAt, l41.createdAt, l24.createdAt, l42.createdAt, l34.createdAt, l43.createdAt] AS times
+		UNWIND times AS t
+		WITH min(t) AS minT, max(t) AS maxT
+		WHERE duration.between(minT, maxT).seconds <= 600
 
 		RETURN count(*) as pods
 	`
