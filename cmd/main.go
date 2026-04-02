@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"codeberg.org/dbus/botdetector/internal/config"
 	"codeberg.org/dbus/botdetector/internal/detection"
 	"codeberg.org/dbus/botdetector/internal/models"
 	"codeberg.org/dbus/botdetector/internal/reader"
@@ -23,8 +24,12 @@ func main() {
 		TimeFormat: time.Kitchen,
 	})
 
-	dbUri := "bolt://localhost:7687"
-	driver, err := neo4j.NewDriver(dbUri, neo4j.BasicAuth("neo4j", "s3cureP@ssword", ""))
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Fatal("Configuration error", "err", err)
+	}
+
+	driver, err := neo4j.NewDriver(cfg.Neo4jURI, neo4j.BasicAuth(cfg.Neo4jUser, cfg.Neo4jPassword, ""))
 	if err != nil {
 		logger.Fatal("Failed to create Neo4j driver", "err", err)
 	}
@@ -37,7 +42,7 @@ func main() {
 		logger.Fatal("Migration failed", "err", err)
 	}
 
-	var r reader.Reader = reader.NewBlueskyReader(logger)
+	var r reader.Reader = reader.NewBlueskyReader(cfg.JetstreamURI, logger)
 	events := make(chan models.Activity, 1000)
 
 	detService := detection.NewService(neoStore, logger)

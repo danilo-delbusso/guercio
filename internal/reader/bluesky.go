@@ -11,23 +11,16 @@ import (
 	"github.com/coder/websocket"
 )
 
-// Reader defines the interface for any platform-specific event stream ingester.
-type Reader interface {
-	Run(ctx context.Context, out chan<- models.Activity) error
-}
-
-// Compile-time check to ensure BlueskyReader implements the Reader interface.
 var _ Reader = (*BlueskyReader)(nil)
 
-// BlueskyReader is the implementation of Reader for the Bluesky Jetstream firehose.
 type BlueskyReader struct {
 	uri    string
 	logger logger.Logger
 }
 
-func NewBlueskyReader(logger logger.Logger) *BlueskyReader {
+func NewBlueskyReader(uri string, logger logger.Logger) *BlueskyReader {
 	return &BlueskyReader{
-		uri:    "wss://jetstream1.us-east.bsky.network/subscribe?wantedCollections=app.bsky.feed.post&wantedCollections=app.bsky.feed.like&wantedCollections=app.bsky.feed.repost",
+		uri:    uri,
 		logger: logger,
 	}
 }
