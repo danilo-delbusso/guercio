@@ -115,7 +115,7 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 }
 
 func (s *Neo4jStore) DetectHighSpeedBurst(ctx context.Context) (int64, error) {
-	session := s.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	session := s.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 
 	query := `
@@ -127,11 +127,10 @@ func (s *Neo4jStore) DetectHighSpeedBurst(ctx context.Context) (int64, error) {
 		WHERE size(times) >= 4
 		WITH a, [i IN range(0, size(times)-4) WHERE duration.between(times[i], times[i+3]).seconds < 15 | 1] AS bursts
 		WHERE size(bursts) > 0
-		SET a:Bot, a.reason = '4-action high-speed burst'
 		RETURN count(a) as detected
 	`
 
-	res, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+	res, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		result, err := tx.Run(ctx, query, nil)
 		if err != nil {
 			return int64(0), err
@@ -152,7 +151,7 @@ func (s *Neo4jStore) DetectHighSpeedBurst(ctx context.Context) (int64, error) {
 }
 
 func (s *Neo4jStore) DetectEngagementPods(ctx context.Context) (int64, error) {
-	session := s.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeWrite})
+	session := s.driver.NewSession(ctx, neo4j.SessionConfig{AccessMode: neo4j.AccessModeRead})
 	defer session.Close(ctx)
 
 	query := `
@@ -178,16 +177,10 @@ func (s *Neo4jStore) DetectEngagementPods(ctx context.Context) (int64, error) {
 		WITH a1, a2, a3, a4, min(l.createdAt) AS minT, max(l.createdAt) AS maxT
 		WHERE duration.inSeconds(minT, maxT).seconds <= 600
 
-		SET a1:Bot, a2:Bot, a3:Bot, a4:Bot,
-		    a1.reason = 'Engagement Pod Detected',
-		    a2.reason = 'Engagement Pod Detected',
-		    a3.reason = 'Engagement Pod Detected',
-		    a4.reason = 'Engagement Pod Detected'
-
 		RETURN count(*) as pods
 	`
 
-	res, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
+	res, err := session.ExecuteRead(ctx, func(tx neo4j.ManagedTransaction) (any, error) {
 		result, err := tx.Run(ctx, query, nil)
 		if err != nil {
 			return int64(0), err
