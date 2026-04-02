@@ -133,7 +133,7 @@ func (s *Neo4jStore) DetectHighSpeedBurst(ctx context.Context) (int64, error) {
 		ORDER BY a, t
 		WITH a, collect(t) AS times
 		WHERE size(times) >= 4
-		WITH a, [i IN range(0, size(times)-4) WHERE duration.between(times[i], times[i+3]).seconds < 15 | 1] AS bursts
+		WITH a, [i IN range(0, size(times)-4) WHERE duration.between(times[i], times[i+3]).seconds < 1 | 1] AS bursts
 		WHERE size(bursts) > 0
 		RETURN count(a) as detected
 	`
