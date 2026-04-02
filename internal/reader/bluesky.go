@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"codeberg.org/dbus/botdetector/internal/logger"
 	"codeberg.org/dbus/botdetector/internal/models"
@@ -89,15 +90,18 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 			AccountID:  v.Did,
 			AccountURL: "https://bsky.app/profile/" + v.Did,
 			PostID:     v.Commit.Record.Uri,
+			PostURL:    atUriToWebUrl(v.Commit.Record.Uri),
 			Text:       v.Commit.Record.Text,
 			CreatedAt:  v.Commit.Record.CreatedAt,
 		}
 
 		if v.Commit.Record.Reply != nil {
 			act.ReplyToID = v.Commit.Record.Reply.Parent.Uri
+			act.ReplyToURL = atUriToWebUrl(v.Commit.Record.Reply.Parent.Uri)
 		}
 		if v.Commit.Record.Subject != nil {
 			act.TargetID = v.Commit.Record.Subject.Uri
+			act.TargetURL = atUriToWebUrl(v.Commit.Record.Subject.Uri)
 		}
 
 		select {
@@ -106,4 +110,12 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 			return ctx.Err()
 		}
 	}
+}
+
+func atUriToWebUrl(uri string) string {
+	parts := strings.Split(uri, "/")
+	if len(parts) >= 5 && parts[0] == "at:" && parts[3] == "app.bsky.feed.post" {
+		return "https://bsky.app/profile/" + parts[2] + "/post/" + parts[4]
+	}
+	return ""
 }

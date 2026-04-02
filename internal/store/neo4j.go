@@ -59,6 +59,7 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    ON CREATE SET u.url = $url
 			    MERGE (p:Post {uri: $uri})
 			    ON CREATE SET
+			        p.url = $postUrl,
 			        p.text = $text,
 			        p.createdAt = datetime($createdAt)
 
@@ -68,13 +69,16 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    WITH p
 			    WHERE $parentUri IS NOT NULL AND $parentUri <> ""
 			    MERGE (parent:Post {uri: $parentUri})
+			    ON CREATE SET parent.url = $parentUrl
 			    MERGE (p)-[:REPLIED_TO]->(parent)
 			    RETURN p
 			`
 			params["uri"] = act.PostID
+			params["postUrl"] = act.PostURL
 			params["text"] = act.Text
 			params["createdAt"] = act.CreatedAt.Format("2006-01-02T15:04:05.999Z07:00")
 			params["parentUri"] = act.ReplyToID
+			params["parentUrl"] = act.ReplyToURL
 
 		case models.ActivityLike:
 			if act.TargetID == "" {
@@ -84,10 +88,12 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    MERGE (u:Account {did: $did})
 			    ON CREATE SET u.url = $url
 			    MERGE (p:Post {uri: $subjectUri})
+			    ON CREATE SET p.url = $targetUrl
 			    MERGE (u)-[r:LIKES]->(p)
 			    ON CREATE SET r.createdAt = datetime($createdAt)
 			`
 			params["subjectUri"] = act.TargetID
+			params["targetUrl"] = act.TargetURL
 			params["createdAt"] = act.CreatedAt.Format("2006-01-02T15:04:05.999Z07:00")
 
 		case models.ActivityRepost:
@@ -98,10 +104,12 @@ func (s *Neo4jStore) SaveActivity(ctx context.Context, act models.Activity) erro
 			    MERGE (u:Account {did: $did})
 			    ON CREATE SET u.url = $url
 			    MERGE (p:Post {uri: $subjectUri})
+			    ON CREATE SET p.url = $targetUrl
 			    MERGE (u)-[r:REPOSTED]->(p)
 			    ON CREATE SET r.createdAt = datetime($createdAt)
 			`
 			params["subjectUri"] = act.TargetID
+			params["targetUrl"] = act.TargetURL
 			params["createdAt"] = act.CreatedAt.Format("2006-01-02T15:04:05.999Z07:00")
 
 		default:

@@ -20,13 +20,16 @@ type Activity struct {
 	AccountURL string
 
 	// For ActivityPost
-	PostID string
-	Text   string
+	PostID  string
+	PostURL string
+	Text    string
 	// Optional parent post ID
-	ReplyToID string
+	ReplyToID  string
+	ReplyToURL string
 
 	// For ActivityLike and ActivityRepost
-	TargetID string // The post being liked or reposted
+	TargetID  string // The post being liked or reposted
+	TargetURL string
 
 	CreatedAt time.Time
 }
