@@ -1,18 +1,18 @@
 services:
   neo4j:
-    image: neo4j:5-community
+    image: neo4j:2026.03-community-trixie
     container_name: neo4j
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "7474:7474" # Browser
+      - "7687:7687" # Driver
     environment:
-      # Format: username/password
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
-      # Required for advanced bot detection algorithms
       - NEO4J_PLUGINS=["apoc", "graph-data-science"]
-      # Allows APOC to write to files if needed
-      - NEO4J_apoc_export_file_enabled=true
-      - NEO4J_apoc_import_file_enabled=true
+      # Disables the annoying welcome message
+      - NEO4J_browser_post__connect__cmd=clear
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=2G
+      - NEO4J_server_memory_pagecache_size=1G
     volumes:
       - ./neo4j/data:/data
       - ./neo4j/logs:/logs
