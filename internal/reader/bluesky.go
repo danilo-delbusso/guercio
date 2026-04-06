@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync/atomic"
 
 	"codeberg.org/dbus/guercio/internal/logger"
 	"codeberg.org/dbus/guercio/internal/models"
@@ -40,6 +41,9 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 	conn.SetReadLimit(10 * 1024 * 1024)
 
 	r.logger.Info("Connected! Streaming to channel...")
+	var processed atomic.Int32
+	var ignored atomic.Int32
+	var failed atomic.Int32
 
 	for {
 		select {
@@ -58,19 +62,23 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 
 		if err := json.NewDecoder(frameReader).Decode(&v); err != nil {
 			if err == io.EOF {
+				ignored.Add(1)
 				continue
 			}
+			failed.Add(1)
 			r.logger.Error("Decode failed", "err", err)
 			continue
 		}
 
 		// Only process 'commit' events
 		if v.Kind != models.BlueskyEventKindCommit || v.Commit == nil {
+			ignored.Add(1)
 			continue
 		}
 
 		// Only process 'create' operations (ignore updates/deletes for now)
 		if v.Commit.Operation != models.BlueskyEventOperationCreate {
+			ignored.Add(1)
 			continue
 		}
 
@@ -87,6 +95,7 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 		case models.BlueskyCollectionRepost:
 			actType = models.ActivityRepost
 		default:
+			ignored.Add(1)
 			continue
 		}
 
@@ -113,6 +122,17 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 
 		select {
 		case out <- act:
+			processed.Add(1)
+
+			p := processed.Load()
+			f := failed.Load()
+			i := ignored.Load()
+
+			if p%10_000 == 0 {
+				r.logger.Info(fmt.Sprintf("Processed %d entries", p))
+				r.logger.Info(fmt.Sprintf("Failed %d entries", f))
+				r.logger.Info(fmt.Sprintf("Ignored %d entries", i))
+			}
 		case <-ctx.Done():
 			return ctx.Err()
 		}
