@@ -54,15 +54,7 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 		}
 
 		// Jetstream wraps the record inside 'commit'
-		var v struct {
-			Did    string `json:"did"`
-			Commit struct {
-				Operation  string            `json:"operation"`
-				Collection string            `json:"collection"`
-				Uri        string            `json:"uri"`
-				Record     models.PostRecord `json:"record"`
-			} `json:"commit"`
-		}
+		var v models.BlueskyJetstreamEvent
 
 		if err := json.NewDecoder(frameReader).Decode(&v); err != nil {
 			if err == io.EOF {
@@ -71,15 +63,28 @@ func (r *BlueskyReader) Run(ctx context.Context, out chan<- models.Activity) err
 			r.logger.Error("Decode failed", "err", err)
 			continue
 		}
-		v.Commit.Record.Uri = v.Commit.Uri
+
+		// Only process 'commit' events
+		if v.Kind != models.BlueskyEventKindCommit || v.Commit == nil {
+			continue
+		}
+
+		// Only process 'create' operations (ignore updates/deletes for now)
+		if v.Commit.Operation != models.BlueskyEventOperationCreate {
+			continue
+		}
+
+		// Jetstream doesn't provide the URI directly in the commit, we must construct it
+		uri := fmt.Sprintf("at://%s/%s/%s", v.Did, v.Commit.Collection, v.Commit.RKey)
+		v.Commit.Record.Uri = uri
 
 		var actType models.ActivityType
 		switch v.Commit.Collection {
-		case "app.bsky.feed.post":
+		case models.BlueskyCollectionPost:
 			actType = models.ActivityPost
-		case "app.bsky.feed.like":
+		case models.BlueskyCollectionLike:
 			actType = models.ActivityLike
-		case "app.bsky.feed.repost":
+		case models.BlueskyCollectionRepost:
 			actType = models.ActivityRepost
 		default:
 			continue

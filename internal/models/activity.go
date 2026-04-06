@@ -28,8 +28,8 @@ type Activity struct {
 	ReplyToURL      string
 	ReplyToAuthorID string
 
-	// For ActivityLike and ActivityRepost
-	TargetID       string // The post being liked or reposted
+	// The post being liked or reposted
+	TargetID       string
 	TargetURL      string
 	TargetAuthorID string
 

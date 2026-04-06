@@ -4,15 +4,47 @@ import (
 	"time"
 )
 
-// FirehoseEvent is the wrapper we send down the channel
-type FirehoseEvent struct {
-	User       string
-	Collection string
-	Post       PostRecord
+type BlueskyEventKind string
+
+const (
+	BlueskyEventKindCommit   BlueskyEventKind = "commit"
+	BlueskyEventKindIdentity BlueskyEventKind = "identity"
+	BlueskyEventKindAccount  BlueskyEventKind = "account"
+)
+
+type BlueskyEventOperation string
+
+const (
+	BlueskyEventOperationCreate BlueskyEventOperation = "create"
+	BlueskyEventOperationUpdate BlueskyEventOperation = "update"
+	BlueskyEventOperationDelete BlueskyEventOperation = "delete"
+)
+
+type BlueskyCollection string
+
+const (
+	BlueskyCollectionPost   BlueskyCollection = "app.bsky.feed.post"
+	BlueskyCollectionLike   BlueskyCollection = "app.bsky.feed.like"
+	BlueskyCollectionRepost BlueskyCollection = "app.bsky.feed.repost"
+)
+
+// BlueskyJetstreamEvent represents the outer payload received from the Jetstream firehose.
+type BlueskyJetstreamEvent struct {
+	Did    string           `json:"did"`
+	Kind   BlueskyEventKind `json:"kind"`
+	Commit *BlueskyCommit   `json:"commit"`
 }
 
-// PostRecord represents the "app.bsky.feed.post" lexicon.
-type PostRecord struct {
+// BlueskyCommit represents the commit operation data inside a BlueskyJetstreamEvent.
+type BlueskyCommit struct {
+	Operation  BlueskyEventOperation `json:"operation"`
+	Collection BlueskyCollection     `json:"collection"`
+	RKey       string                `json:"rkey"`
+	Record     BlueskyRecord         `json:"record"`
+}
+
+// BlueskyRecord represents a post, like, or repost lexicon.
+type BlueskyRecord struct {
 	Uri       string      `json:"uri"`
 	Type      string      `json:"$type" cbor:"$type"`
 	Text      string      `json:"text" cbor:"text"`
